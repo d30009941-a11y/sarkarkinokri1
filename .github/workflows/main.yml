@@ -29,8 +29,7 @@ jobs:
 
       - name: Install Dependencies
         run: |
-          pip install google-generativeai
-          pip install PyPDF2
+          pip install google-genai
           pip install pdfplumber
 
       - name: Run Engine
