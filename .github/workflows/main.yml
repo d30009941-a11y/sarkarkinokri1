@@ -1,55 +1,41 @@
-name: Sarkar Automation Engine
+name: Run Engine
 
 on:
+  workflow_dispatch:
   push:
     paths:
-      - 'notification/*.pdf'
-  workflow_dispatch:
-
-concurrency:
-  group: sarkar-automation
-  cancel-in-progress: false
+      - 'notification/**'
+      - 'scripts/process_pdf.py'
+      - 'requirements.txt'
 
 jobs:
-  process-and-update:
+  build:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
 
     steps:
-      - name: Checkout Repository
+      - name: Checkout repository
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
-      - name: Setup Python
+      - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.9'
+          python-version: '3.11'
 
-      - name: Install Dependencies
+      - name: Install dependencies
         run: |
-          pip install google-genai
-          pip install pdfplumber
+          pip install --upgrade pip
+          pip install -r requirements.txt
 
       - name: Run Engine
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-        run: python scripts/process_pdf.py
-
-      - name: Commit and Push Safely
         run: |
-          git config --local user.email "action@github.com"
-          git config --local user.name "GitHub Action"
+          python scripts/process_pdf.py
 
+      - name: Commit and Push if changes
+        run: |
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
           git add .
-
-          if git diff --cached --quiet; then
-            echo "No changes detected. Skipping commit and push."
-            exit 0
-          fi
-
-          git commit -m "AI Automated Update"
-
-          git pull --rebase origin main
-          git push origin main
+          git diff --cached --quiet || git commit -m "Auto update jobs data"
+          git push
