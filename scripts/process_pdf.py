@@ -1,94 +1,224 @@
 import os
 import json
 import re
+import pdfplumber
 import google.generativeai as genai
-from PyPDF2 import PdfReader
 from datetime import datetime
 
-# Setup
+# ==========================
+# CONFIGURATION
+# ==========================
 genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
-model = genai.GenerativeModel('gemini-1.5-flash')
+model = genai.GenerativeModel("gemini-1.5-flash")
 
+PDF_DIR = "notification/"
+JOBS_DIR = "data/jobsdata/"
+EVENTS_FILE = "data/events.json"
+
+
+# ==========================
+# SAFE JSON LOADER
+# ==========================
+def load_events():
+    if not os.path.exists(EVENTS_FILE):
+        return {"data": []}
+
+    with open(EVENTS_FILE, "r", encoding="utf-8") as f:
+        db = json.load(f)
+
+    # Self-healing structure
+    if "data" not in db or not isinstance(db["data"], list):
+        db["data"] = []
+
+    return db
+
+
+# ==========================
+# PDF TEXT EXTRACTION (Better than PyPDF2)
+# ==========================
 def extract_pdf_text(path):
+    text = ""
     try:
-        reader = PdfReader(path)
-        # Pehle 5 pages scan karte hain kyunki recruitment details shuru mein hoti hain
-        return " ".join([p.extract_text() for p in reader.pages[:5]])
-    except: return ""
+        with pdfplumber.open(path) as pdf:
+            for page in pdf.pages[:10]:  # first 10 pages
+                content = page.extract_text()
+                if content:
+                    text += content + "\n"
+    except:
+        pass
+    return text
 
+
+# ==========================
+# AI EXTRACTION
+# ==========================
+def extract_structured_data(slug_id, text):
+
+    prompt = f"""
+Return ONLY valid JSON.
+
+Root key must be exactly "{slug_id}"
+
+Structure must strictly follow:
+
+{{
+  "{slug_id}": {{
+    "overview": {{
+        "post_name": "",
+        "recruitment_body": "",
+        "notification_number": ""
+    }},
+    "important_dates": {{}},
+    "application_fee": {{}},
+    "age_limit": {{
+        "minimum": "",
+        "maximum": "",
+        "relaxation": ""
+    }},
+    "educational_qualification": [],
+    "vacancy_details": {{
+        "total": "",
+        "table": []
+    }},
+    "selection_process": [],
+    "syllabus": {{
+        "mathematics": [],
+        "reasoning": [],
+        "general_awareness": []
+    }},
+    "medical_standards": {{}},
+    "important_instructions": [],
+    "important_links": {{
+        "links": {{}}
+    }}
+  }}
+}}
+
+Extract full structured data from this text:
+
+{text[:15000]}
+"""
+
+    response = model.generate_content(prompt)
+
+    match = re.search(r"\{.*\}", response.text, re.DOTALL)
+    if not match:
+        raise ValueError("AI did not return valid JSON")
+
+    data = json.loads(match.group(0))
+    return data
+
+
+# ==========================
+# SCHEMA ENFORCER
+# ==========================
+def enforce_schema(slug_id, data):
+    base = data.get(slug_id, {})
+
+    def ensure(obj, key, default):
+        if key not in obj or obj[key] is None:
+            obj[key] = default
+
+    ensure(base, "overview", {})
+    ensure(base, "important_dates", {})
+    ensure(base, "application_fee", {})
+    ensure(base, "age_limit", {"minimum": "", "maximum": "", "relaxation": ""})
+    ensure(base, "educational_qualification", [])
+    ensure(base, "vacancy_details", {"total": "", "table": []})
+    ensure(base, "selection_process", [])
+    ensure(base, "syllabus", {"mathematics": [], "reasoning": [], "general_awareness": []})
+    ensure(base, "medical_standards", {})
+    ensure(base, "important_instructions", [])
+    ensure(base, "important_links", {"links": {}})
+
+    # Critical fix for your details.html
+    if "links" not in base["important_links"]:
+        base["important_links"]["links"] = {}
+
+    data[slug_id] = base
+    return data
+
+
+# ==========================
+# SAVE JOB JSON
+# ==========================
+def save_job_json(slug_id, data):
+    os.makedirs(JOBS_DIR, exist_ok=True)
+    with open(f"{JOBS_DIR}{slug_id}.json", "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=4)
+
+
+# ==========================
+# UPDATE EVENTS.JSON
+# ==========================
+def update_events(slug_id, structured_data):
+    db = load_events()
+
+    existing_ids = {item["id"] for item in db["data"]}
+
+    if slug_id in existing_ids:
+        return
+
+    base = structured_data[slug_id]
+
+    meta_entry = {
+        "id": slug_id,
+        "master": base["overview"].get("post_name", slug_id),
+        "lifecycle": "notification",
+        "phase": "",
+        "region": "",
+        "notification_type": "detailed",
+        "type": "Recruitment",
+        "status": "Active",
+        "url": base["important_links"]["links"].get("Official Website", ""),
+        "last_updated": datetime.now().strftime("%Y-%m-%d")
+    }
+
+    db["data"].insert(0, meta_entry)
+
+    with open(EVENTS_FILE, "w", encoding="utf-8") as f:
+        json.dump(db, f, indent=4)
+
+
+# ==========================
+# MAIN ENGINE
+# ==========================
 def run_engine():
-    PDF_DIR = "notification/"
-    JOBS_DIR = "data/jobsdata/"
-    EVENTS_FILE = "data/events.json"
 
-    # Load Main DB
-    with open(EVENTS_FILE, "r") as f: db = json.load(f)
-    existing_ids = {item['id'] for item in db['data']}
+    db = load_events()
+    existing_ids = {item["id"] for item in db["data"]}
 
     for file in os.listdir(PDF_DIR):
-        if not file.endswith(".pdf"): continue
-        
-        # ID as per your rules (org-code-year)
-        slug_id = file.lower().replace(".pdf", "").replace(" ", "-")[:40]
-        if slug_id in existing_ids: continue
 
-        print(f"🚀 Expert Extraction Started: {file}")
+        if not file.endswith(".pdf"):
+            continue
+
+        slug_id = file.lower().replace(".pdf", "").replace(" ", "-")[:50]
+
+        if slug_id in existing_ids:
+            print(f"⏩ Skipped existing: {slug_id}")
+            continue
+
+        print(f"🚀 Processing: {file}")
+
         text = extract_pdf_text(os.path.join(PDF_DIR, file))
 
-        # --- SUPER RICH PROMPT ---
-        prompt = f"""
-        Act as a Govt Job Notification Expert. Analyze the text and return ONLY a JSON object.
-        The JSON key must be exactly "{slug_id}".
-        
-        Fields to extract:
-        1. overview: {{post_name, recruitment_body, notification_number}}
-        2. important_dates: {{Application Start Date, Last Date to Apply, Last Date Fee Payment, Correction Window, CBT Exam Date}}
-        3. application_fee: {{General/OBC/EWS, SC/ST/Female, Payment Mode}}
-        4. age_limit: {{Min, Max, Relaxation}}
-        5. educational_qualification: (detailed list)
-        6. vacancy_details: {{total, table: [{{Region/Force, UR, OBC, SC, ST, EWS, Total}}]}}
-        7. selection_process: (List of stages)
-        8. syllabus: {{mathematics: [], reasoning: [], general_awareness: []}}
-        9. medical_standards: {{category, vision, height, chest}}
-        10. important_instructions: (List of 4-5 key points)
-        11. important_links: {{Apply Now, Official Website}}
-
-        Text: {text[:4000]}
-        """
+        if not text.strip():
+            print("❌ No extractable text found.")
+            continue
 
         try:
-            response = model.generate_content(prompt)
-            json_str = re.search(r'\{.*\}', response.text, re.DOTALL).group(0)
-            rich_data = json.loads(json_str)
+            structured_data = extract_structured_data(slug_id, text)
+            structured_data = enforce_schema(slug_id, structured_data)
 
-            # Individual Rich JSON save (for details.html)
-            os.makedirs(JOBS_DIR, exist_ok=True)
-            with open(f"{JOBS_DIR}{slug_id}.json", "w") as jf:
-                json.dump(rich_data, jf, indent=4)
+            save_job_json(slug_id, structured_data)
+            update_events(slug_id, structured_data)
 
-            # Update Index (events.json) - Meta Only
-            # Hum meta-data AI ke response se hi extract karenge
-            meta_entry = {
-                "id": slug_id,
-                "master": rich_data[slug_id]['overview']['post_name'],
-                "lifecycle": "notification",
-                "phase": "",
-                "region": rich_data[slug_id].get('region', ""),
-                "notification_type": "detailed",
-                "type": "Recruitment",
-                "status": "Active",
-                "url": rich_data[slug_id]['important_links'].get('Official Website', ""),
-                "last_updated": datetime.now().strftime('%Y-%m-%d')
-            }
-            db['data'].insert(0, meta_entry)
-            print(f"✅ Rich Data Saved for {slug_id}")
+            print(f"✅ Successfully saved: {slug_id}")
 
         except Exception as e:
             print(f"❌ Error in {file}: {e}")
 
-    # Save final DB
-    with open(EVENTS_FILE, "w") as f:
-        json.dump(db, f, indent=4)
 
 if __name__ == "__main__":
     run_engine()
