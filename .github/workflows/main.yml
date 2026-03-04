@@ -1,0 +1,36 @@
+name: SarkarKinokri Automation
+on:
+  push:
+    paths:
+      - 'notification/*.pdf'
+  workflow_dispatch: # Manual button ke liye
+
+jobs:
+  process-job:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+
+      - name: Process PDF with Gemini
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: python scripts/process_pdf.py
+
+      - name: Commit and Push changes
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add data/
+          git commit -m "Automated update: New Job added" || echo "No changes to commit"
+          git push
+          
