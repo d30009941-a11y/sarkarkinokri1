@@ -1,4 +1,10 @@
 import os
+
+print("Current working directory:", os.getcwd())
+print("Folders in root:", os.listdir())
+print("Notification folder exists:", os.path.exists("notification"))
+print("Files inside notification:", os.listdir("notification") if os.path.exists("notification") else "NOT FOUND")
+import os
 import json
 import re
 import pdfplumber
