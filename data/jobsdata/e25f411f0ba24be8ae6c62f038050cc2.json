@@ -1,0 +1,452 @@
+{
+    "e25f411f0ba24be8ae6c62f038050cc2": {
+        "organization": "Indian Oil Corporation Limited (IOCL)",
+        "advertisement_date": "20-12-2025",
+        "pay_scale": "Rs. 25,000-1,05,000/-",
+        "refinery_locations": [
+            "Guwahati (Assam)",
+            "Barauni (Bihar)",
+            "Vadodara (Gujarat)",
+            "Haldia (West Bengal)",
+            "Mathura (Uttar Pradesh)",
+            "Panipat (Haryana)",
+            "Digboi (Assam)",
+            "Bongaigaon (Assam)",
+            "Paradip (Odisha)"
+        ],
+        "vacancies": [
+            {
+                "post_code": "201",
+                "post_name": "Junior Engineering Assistant-IV (Production)",
+                "details": {
+                    "Guwahati": {
+                        "total": 17,
+                        "ur": 8,
+                        "ews": 1,
+                        "sc": 1,
+                        "st": 2,
+                        "obc": 5
+                    },
+                    "Barauni": {
+                        "total": 51,
+                        "ur": 24,
+                        "ews": 5,
+                        "sc": 8,
+                        "st": 0,
+                        "obc": 14
+                    },
+                    "Gujarat": {
+                        "total": 75,
+                        "ur": 32,
+                        "ews": 7,
+                        "sc": 5,
+                        "st": 11,
+                        "obc": 20
+                    },
+                    "Haldia": {
+                        "total": 16,
+                        "ur": 7,
+                        "ews": 2,
+                        "sc": 3,
+                        "st": 1,
+                        "obc": 3
+                    },
+                    "Mathura": {
+                        "total": 12,
+                        "ur": 6,
+                        "ews": 1,
+                        "sc": 2,
+                        "st": 0,
+                        "obc": 3
+                    },
+                    "PRPC_Panipat": {
+                        "total": 19,
+                        "ur": 9,
+                        "ews": 2,
+                        "sc": 4,
+                        "st": 0,
+                        "obc": 4
+                    },
+                    "Digboi": {
+                        "total": 20,
+                        "ur": 10,
+                        "ews": 2,
+                        "sc": 1,
+                        "st": 2,
+                        "obc": 5
+                    },
+                    "Bongaigaon": {
+                        "total": 18,
+                        "ur": 7,
+                        "ews": 2,
+                        "sc": 2,
+                        "st": 3,
+                        "obc": 4
+                    },
+                    "Paradip": {
+                        "total": 4,
+                        "ur": 3,
+                        "ews": 0,
+                        "sc": 0,
+                        "st": 1,
+                        "obc": 0
+                    }
+                }
+            },
+            {
+                "post_code": "202",
+                "post_name": "Junior Engineering Assistant-IV (P&U)",
+                "details": {
+                    "Guwahati": {
+                        "total": 6,
+                        "ur": 2,
+                        "ews": 1,
+                        "sc": 0,
+                        "st": 2,
+                        "obc": 1
+                    },
+                    "Barauni": {
+                        "total": 9,
+                        "ur": 4,
+                        "ews": 1,
+                        "sc": 1,
+                        "st": 0,
+                        "obc": 3
+                    },
+                    "Gujarat": {
+                        "total": 11,
+                        "ur": 4,
+                        "ews": 1,
+                        "sc": 1,
+                        "st": 2,
+                        "obc": 3
+                    },
+                    "Digboi": {
+                        "total": 2,
+                        "ur": 2,
+                        "ews": 0,
+                        "sc": 0,
+                        "st": 0,
+                        "obc": 0
+                    },
+                    "Bongaigaon": {
+                        "total": 9,
+                        "ur": 5,
+                        "ews": 1,
+                        "sc": 1,
+                        "st": 0,
+                        "obc": 2
+                    }
+                }
+            },
+            {
+                "post_code": "203",
+                "post_name": "Junior Engineering Assistant-IV (P&U-O&M)",
+                "details": {
+                    "PRPC_Panipat": {
+                        "total": 19,
+                        "ur": 9,
+                        "ews": 2,
+                        "sc": 4,
+                        "st": 0,
+                        "obc": 4
+                    },
+                    "Paradip": {
+                        "total": 3,
+                        "ur": 3,
+                        "ews": 0,
+                        "sc": 0,
+                        "st": 0,
+                        "obc": 0
+                    }
+                }
+            },
+            {
+                "post_code": "204",
+                "post_name": "Junior Engineering Assistant-IV (Electrical) / Junior Technical Assistant \u2013 IV (Electrical)",
+                "details": {
+                    "Barauni": {
+                        "total": 9,
+                        "ur": 4,
+                        "ews": 1,
+                        "sc": 2,
+                        "st": 0,
+                        "obc": 2
+                    },
+                    "Gujarat": {
+                        "total": 1,
+                        "ur": 0,
+                        "ews": 0,
+                        "sc": 0,
+                        "st": 1,
+                        "obc": 0
+                    },
+                    "Digboi": {
+                        "total": 1,
+                        "ur": 1,
+                        "ews": 0,
+                        "sc": 0,
+                        "st": 0,
+                        "obc": 0
+                    },
+                    "Bongaigaon": {
+                        "total": 1,
+                        "ur": 1,
+                        "ews": 0,
+                        "sc": 0,
+                        "st": 0,
+                        "obc": 0
+                    }
+                }
+            },
+            {
+                "post_code": "205",
+                "post_name": "Junior Engineering Assistant-IV (Mechanical) / Junior Technical Assistant \u2013 IV (Mechanical)",
+                "details": {
+                    "Guwahati": {
+                        "total": 2,
+                        "ur": 1,
+                        "ews": 1,
+                        "sc": 0,
+                        "st": 0,
+                        "obc": 0
+                    },
+                    "Barauni": {
+                        "total": 3,
+                        "ur": 1,
+                        "ews": 0,
+                        "sc": 0,
+                        "st": 0,
+                        "obc": 2
+                    },
+                    "PRPC_Panipat": {
+                        "total": 2,
+                        "ur": 1,
+                        "ews": 0,
+                        "sc": 0,
+                        "st": 0,
+                        "obc": 1
+                    },
+                    "Digboi": {
+                        "total": 4,
+                        "ur": 4,
+                        "ews": 0,
+                        "sc": 0,
+                        "st": 0,
+                        "obc": 0
+                    },
+                    "Bongaigaon": {
+                        "total": 3,
+                        "ur": 3,
+                        "ews": 0,
+                        "sc": 0,
+                        "st": 0,
+                        "obc": 0
+                    }
+                }
+            },
+            {
+                "post_code": "206",
+                "post_name": "Junior Engineering Assistant-IV (Instrumentation) / Junior Technical Assistant \u2013 IV (Instrumentation)",
+                "details": {
+                    "Barauni": {
+                        "total": 1,
+                        "ur": 1,
+                        "ews": 0,
+                        "sc": 0,
+                        "st": 0,
+                        "obc": 0
+                    },
+                    "Gujarat": {
+                        "total": 1,
+                        "ur": 1,
+                        "ews": 0,
+                        "sc": 0,
+                        "st": 0,
+                        "obc": 0
+                    },
+                    "Mathura": {
+                        "total": 1,
+                        "ur": 0,
+                        "ews": 0,
+                        "sc": 0,
+                        "st": 1,
+                        "obc": 0
+                    },
+                    "PRPC_Panipat": {
+                        "total": 2,
+                        "ur": 2,
+                        "ews": 0,
+                        "sc": 0,
+                        "st": 0,
+                        "obc": 0
+                    },
+                    "Paradip": {
+                        "total": 1,
+                        "ur": 0,
+                        "ews": 0,
+                        "sc": 0,
+                        "st": 1,
+                        "obc": 0
+                    }
+                }
+            },
+            {
+                "post_code": "207",
+                "post_name": "Junior Quality Control Analyst",
+                "details": {
+                    "Guwahati": {
+                        "total": 3,
+                        "ur": 2,
+                        "ews": 0,
+                        "sc": 0,
+                        "st": 0,
+                        "obc": 1
+                    },
+                    "Barauni": {
+                        "total": 2,
+                        "ur": 1,
+                        "ews": 0,
+                        "sc": 0,
+                        "st": 0,
+                        "obc": 1
+                    },
+                    "Gujarat": {
+                        "total": 4,
+                        "ur": 3,
+                        "ews": 0,
+                        "sc": 0,
+                        "st": 0,
+                        "obc": 1
+                    },
+                    "Haldia": {
+                        "total": 1,
+                        "ur": 1,
+                        "ews": 0,
+                        "sc": 0,
+                        "st": 0,
+                        "obc": 0
+                    },
+                    "PRPC_Panipat": {
+                        "total": 4,
+                        "ur": 2,
+                        "ews": 0,
+                        "sc": 1,
+                        "st": 0,
+                        "obc": 1
+                    },
+                    "Digboi": {
+                        "total": 2,
+                        "ur": 1,
+                        "ews": 0,
+                        "sc": 1,
+                        "st": 0,
+                        "obc": 0
+                    },
+                    "Bongaigaon": {
+                        "total": 4,
+                        "ur": 3,
+                        "ews": 0,
+                        "sc": 0,
+                        "st": 0,
+                        "obc": 1
+                    }
+                }
+            },
+            {
+                "post_code": "208",
+                "post_name": "Junior Engineering Assistant-IV (Fire & Safety)",
+                "details": {
+                    "Guwahati": {
+                        "total": 8,
+                        "ur": 3,
+                        "ews": 0,
+                        "sc": 1,
+                        "st": 1,
+                        "obc": 3
+                    },
+                    "Barauni": {
+                        "total": 2,
+                        "ur": 1,
+                        "ews": 0,
+                        "sc": 1,
+                        "st": 0,
+                        "obc": 0
+                    },
+                    "Gujarat": {
+                        "total": 8,
+                        "ur": 4,
+                        "ews": 1,
+                        "sc": 0,
+                        "st": 1,
+                        "obc": 2
+                    },
+                    "Haldia": {
+                        "total": 3,
+                        "ur": 2,
+                        "ews": 0,
+                        "sc": 1,
+                        "st": 0,
+                        "obc": 0
+                    },
+                    "Mathura": {
+                        "total": 4,
+                        "ur": 2,
+                        "ews": 0,
+                        "sc": 1,
+                        "st": 0,
+                        "obc": 1
+                    },
+                    "PRPC_Panipat": {
+                        "total": 5,
+                        "ur": 3,
+                        "ews": 0,
+                        "sc": 1,
+                        "st": 0,
+                        "obc": 1
+                    },
+                    "Digboi": {
+                        "total": 11,
+                        "ur": 5,
+                        "ews": 1,
+                        "sc": 1,
+                        "st": 2,
+                        "obc": 2
+                    },
+                    "Bongaigaon": {
+                        "total": 10,
+                        "ur": 4,
+                        "ews": 1,
+                        "sc": 1,
+                        "st": 1,
+                        "obc": 3
+                    }
+                }
+            }
+        ],
+        "overview": {},
+        "important_dates": {},
+        "application_fee": {},
+        "age_limit": {
+            "minimum": "",
+            "maximum": "",
+            "relaxation": ""
+        },
+        "educational_qualification": [],
+        "vacancy_details": {
+            "total": "",
+            "table": []
+        },
+        "selection_process": [],
+        "syllabus": {
+            "mathematics": [],
+            "reasoning": [],
+            "general_awareness": []
+        },
+        "medical_standards": {},
+        "important_instructions": [],
+        "important_links": {
+            "links": {}
+        }
+    }
+}

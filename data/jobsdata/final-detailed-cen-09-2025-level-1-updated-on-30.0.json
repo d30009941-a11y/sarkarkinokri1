@@ -1,0 +1,59 @@
+{
+    "final-detailed-cen-09-2025-level-1-updated-on-30.0": {
+        "notification_details": {
+            "notification_number": "09/2025",
+            "organization": "Railway Recruitment Boards (RRBs)",
+            "ministry": "Ministry of Railways, Government of India",
+            "post_level": "Level 1 of 7th CPC Pay Matrix",
+            "total_vacancies": 22195,
+            "pay_scale": "18000 INR"
+        },
+        "important_dates": {
+            "indicative_notice_date": "27.12.2025",
+            "application_opening_date": "31.01.2026",
+            "application_closing_date": "02.03.2026",
+            "fee_payment_last_date": "04.03.2026",
+            "application_modification_window": "05.03.2026 to 14.03.2026",
+            "scribe_details_submission_window": "15.03.2026 to 19.03.2026"
+        },
+        "eligibility_criteria": {
+            "age_limit": {
+                "range": "18-33 Years",
+                "reference_date": "01.01.2026"
+            },
+            "medical_standard": "As per Annexure A",
+            "application_mode": "Online only"
+        },
+        "application_rules": {
+            "one_candidate_one_application": "Mandatory",
+            "rrbs_selection": "Only one RRB/Railway Zone can be selected",
+            "non_modifiable_details": [
+                "Create an Account information",
+                "Chosen Railway Zone"
+            ]
+        },
+        "overview": {},
+        "application_fee": {},
+        "age_limit": {
+            "minimum": "",
+            "maximum": "",
+            "relaxation": ""
+        },
+        "educational_qualification": [],
+        "vacancy_details": {
+            "total": "",
+            "table": []
+        },
+        "selection_process": [],
+        "syllabus": {
+            "mathematics": [],
+            "reasoning": [],
+            "general_awareness": []
+        },
+        "medical_standards": {},
+        "important_instructions": [],
+        "important_links": {
+            "links": {}
+        }
+    }
+}
