@@ -1,36 +1,44 @@
-name: SarkarKinokri Automation
+name: Sarkar Automation Engine
 on:
   push:
     paths:
-      - 'notification/*.pdf'
-  workflow_dispatch: # Manual button ke liye
+      - 'notification/**.pdf' # Path updated to match your folder
+  schedule:
+    - cron: '0 0 * * *'
+  workflow_dispatch:
 
 jobs:
-  process-job:
+  process-and-update:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
-      - name: Set up Python
+      - name: Setup Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.9'
+          python-version: '3.10'
 
-      - name: Install dependencies
-        run: |
-          pip install -r requirements.txt
+      - name: Install Dependencies
+        run: pip install google-generativeai
 
-      - name: Process PDF with Gemini
+      - name: Run Engine
         env:
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-        run: python scripts/process_pdf.py
-
-      - name: Commit and Push changes
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }} # Yahan GitHub secret use ho raha hai
         run: |
-          git config --local user.email "action@github.com"
-          git config --local user.name "GitHub Action"
-          git add data/
-          git commit -m "Automated update: New Job added" || echo "No changes to commit"
+          for f in notification/*.pdf; do
+            if [ -f "$f" ]; then
+              python scripts/process_pdf.py "$f"
+              mkdir -p notification/archive
+              mv "$f" notification/archive/
+            fi
+          done
+          python scripts/status_refresher.py
+
+      - name: Commit and Push
+        run: |
+          git config --global user.name "Sarkar-Bot"
+          git config --global user.email "bot@sarkarkinokri.com"
+          git add .
+          git commit -m "Auto-Update: Job Feed and Status [skip ci]" || exit 0
           git push
-          
