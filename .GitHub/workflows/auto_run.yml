@@ -1,0 +1,47 @@
+name: Sarkar Automation Engine
+on:
+  push:
+    paths:
+      - 'notifications/**.pdf' # Jab aap notifications folder mein PDF dalenge
+  schedule:
+    - cron: '0 0 * * *' # Roz raat 12 baje status update ke liye
+  workflow_dispatch: # Taaki aap manually bhi button daba kar chala sakein
+
+jobs:
+  process-and-update:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install Dependencies
+        run: pip install google-generativeai
+
+      - name: Run Engine
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          # 1. Naye PDFs ko process karna
+          for f in notifications/*.pdf; do
+            if [ -f "$f" ]; then
+              python scripts/process_pdf.py "$f"
+              mkdir -p notifications/archive
+              mv "$f" notifications/archive/
+            fi
+          done
+          
+          # 2. Daily Status update karna
+          python scripts/status_refresher.py
+
+      - name: Commit and Push
+        run: |
+          git config --global user.name "Sarkar-Bot"
+          git config --global user.email "bot@sarkarkinokri.com"
+          git add .
+          git commit -m "Auto-Update: Job Feed and Status [skip ci]" || exit 0
+          git push
