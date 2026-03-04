@@ -20,7 +20,7 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0   # Important for rebase
+          fetch-depth: 0
 
       - name: Setup Python
         uses: actions/setup-python@v4
@@ -28,24 +28,29 @@ jobs:
           python-version: '3.9'
 
       - name: Install Dependencies
-        run: pip install google-generativeai PyPDF2
+        run: |
+          pip install google-generativeai
+          pip install PyPDF2
+          pip install pdfplumber
 
       - name: Run Engine
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: python scripts/process_pdf.py
 
-      - name: Commit and Push Changes
+      - name: Commit and Push Safely
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
 
           git add .
 
-          git commit -m "AI Automated Update" || echo "No changes to commit"
+          if git diff --cached --quiet; then
+            echo "No changes detected. Skipping commit and push."
+            exit 0
+          fi
 
-          # Pull latest changes safely
-          git pull --rebase origin main || echo "Nothing to pull"
+          git commit -m "AI Automated Update"
 
-          # Push safely
+          git pull --rebase origin main
           git push origin main
