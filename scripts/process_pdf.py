@@ -1,67 +1,99 @@
 import os
-import sys
 import json
-from datetime import datetime
+import re
 import google.generativeai as genai
+from PyPDF2 import PdfReader
 
-genai.configure(api_key=os.environ["GEMINI_API_KEY"])
+# API Configuration
+genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
+model = genai.GenerativeModel('gemini-1.5-flash')
 
-def process_pdf(pdf_path):
-    model = genai.GenerativeModel("gemini-1.5-flash")
-    pdf_file = genai.upload_file(path=pdf_path)
-    
-    # Prompt tailored to your details.html "renderEngine"
-    prompt = """Analyze this recruitment PDF and return ONLY JSON:
-    {
-      "master_id": "org-shortcode-notif-year (e.g., rrb-cen-01-2024)",
-      "lifecycle": "notification/admit_card/result/answer_key/dv",
-      "overview": {
-        "post_name": "Full Post Name",
-        "recruitment_body": "Organization Name",
-        "notification_number": "Official Notif No."
-      },
-      "important_dates": { "Start Date": "", "Last Date": "", "Exam Date": "" },
-      "application_fee": { "General": "", "SC/ST": "" },
-      "important_links": {
-        "links": { "Download Notification": "url", "Official Website": "url" }
-      },
-      "short_info": "2-3 lines for fallback"
-    }"""
-    
-    response = model.generate_content([prompt, pdf_file])
-    data = json.loads(response.text.strip().replace('```json', '').replace('```', ''))
-    
-    master_id = data['master_id']
-    child_id = f"{master_id}-{data['lifecycle']}"
-    
-    # 1. Update data/events.json
-    update_events(data, child_id)
-    
-    # 2. Create data/jobsdata/{child_id}.json (Lightweight individual file)
-    job_data_path = f"data/jobsdata/{child_id}.json"
-    os.makedirs('data/jobsdata', exist_ok=True)
-    with open(job_data_path, 'w') as f:
-        # Wrapping in child_id key as your details.html expects: json[id]
-        json.dump({child_id: data}, f, indent=2)
+def get_pdf_text(path):
+    try:
+        reader = PdfReader(path)
+        return " ".join([page.extract_text() for page in reader.pages[:3]])
+    except Exception as e:
+        print(f"Error reading PDF {path}: {e}")
+        return ""
 
-def update_events(data, child_id):
-    path = 'data/events.json'
-    with open(path, 'r+') as f:
-        events = json.load(f)
+def clean_ai_json(text):
+    match = re.search(r'\{.*\}', text, re.DOTALL)
+    return match.group(0) if match else text
+
+def process_portal_updates():
+    PDF_DIR = "notification/"
+    DATA_DIR = "data/"
+    JOBS_DATA_DIR = "data/jobsdata/"
+    EVENTS_FILE = os.path.join(DATA_DIR, "events.json")
+    
+    # 1. Automatic Folder/File Creation (Long term safety)
+    if not os.path.exists(JOBS_DATA_DIR):
+        os.makedirs(JOBS_DATA_DIR)
+        print(f"Created directory: {JOBS_DATA_DIR}")
+
+    if not os.path.exists(EVENTS_FILE) or os.stat(EVENTS_FILE).st_size == 0:
+        with open(EVENTS_FILE, "w") as f:
+            json.dump({"data": []}, f)
+        print("Initialized empty events.json")
+
+    # Load existing data
+    with open(EVENTS_FILE, "r", encoding="utf-8") as f:
+        db = json.load(f)
+
+    processed_ids = {item['id'] for item in db['data']}
+    new_entries = []
+
+    for filename in os.listdir(PDF_DIR):
+        if not filename.endswith(".pdf"): continue
         
-        # New entry for index.html feed
-        new_entry = {
-            "id": child_id,
-            "master": data['master_id'],
-            "type": data['lifecycle'].capitalize(),
-            "status": "Active",
-            "url": data['important_links']['links'].get('Official Website', '#'),
-            "dates": data['important_dates']
-        }
-        events['data'].insert(0, new_entry)
-        f.seek(0)
-        json.dump(events, f, indent=2)
-        f.truncate()
+        # Unique ID based on filename
+        slug_id = filename.lower().replace(".pdf", "").replace(" ", "-")
+        if slug_id in processed_ids: continue
+
+        print(f"AI Analyzing: {filename}...")
+        raw_text = get_pdf_text(os.path.join(PDF_DIR, filename))
+        
+        # Professional Prompt (With strict ID instruction)
+        prompt = f"""
+        Extract job details from the text. Return ONLY JSON.
+        ID Format: org-shortname-notification-year (e.g., rrb-cen-01-2024)
+        JSON Template:
+        {{
+            "id": "{slug_id}",
+            "master": "Job Title",
+            "type": "Recruitment/Result/Admit Card",
+            "lifecycle": "lowercase type",
+            "status": "active",
+            "date": "2026-03-04",
+            "details": {{
+                "post": "Post name",
+                "vacancy": "Total vacancy",
+                "eligibility": "Qualification",
+                "last_date": "Deadline"
+            }}
+        }}
+        Text: {raw_text[:3000]}
+        """
+
+        try:
+            response = model.generate_content(prompt)
+            job_info = json.loads(clean_ai_json(response.text))
+            job_info["official_link"] = f"notification/{filename}"
+            
+            # Save detail file for details.html
+            with open(f"{JOBS_DATA_DIR}{slug_id}.json", "w") as jf:
+                json.dump(job_info, jf, indent=4)
+            
+            new_entries.append(job_info)
+            print(f"Successfully processed: {slug_id}")
+        except Exception as e:
+            print(f"Skipping {filename} due to error: {e}")
+
+    if new_entries:
+        db['data'] = new_entries + db['data']
+        with open(EVENTS_FILE, "w", encoding="utf-8") as f:
+            json.dump(db, f, indent=4, ensure_ascii=False)
+        print(f"Update Complete! {len(new_entries)} items added.")
 
 if __name__ == "__main__":
-    process_pdf(sys.argv[1])
+    process_portal_updates()
