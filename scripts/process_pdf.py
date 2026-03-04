@@ -1,21 +1,22 @@
 import os
+import json
+import re
+import pdfplumber
+from datetime import datetime
+from google import genai
 
+# ==========================
+# DEBUG (Keep for now)
+# ==========================
 print("Current working directory:", os.getcwd())
 print("Folders in root:", os.listdir())
 print("Notification folder exists:", os.path.exists("notification"))
 print("Files inside notification:", os.listdir("notification") if os.path.exists("notification") else "NOT FOUND")
-import os
-import json
-import re
-import pdfplumber
-import google.generativeai as genai
-from datetime import datetime
 
 # ==========================
 # CONFIGURATION
 # ==========================
-genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
-model = genai.GenerativeModel("gemini-1.5-flash")
+client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 
 PDF_DIR = "notification/"
 JOBS_DIR = "data/jobsdata/"
@@ -32,7 +33,6 @@ def load_events():
     with open(EVENTS_FILE, "r", encoding="utf-8") as f:
         db = json.load(f)
 
-    # Self-healing structure
     if "data" not in db or not isinstance(db["data"], list):
         db["data"] = []
 
@@ -40,13 +40,13 @@ def load_events():
 
 
 # ==========================
-# PDF TEXT EXTRACTION (Better than PyPDF2)
+# PDF TEXT EXTRACTION
 # ==========================
 def extract_pdf_text(path):
     text = ""
     try:
         with pdfplumber.open(path) as pdf:
-            for page in pdf.pages[:10]:  # first 10 pages
+            for page in pdf.pages[:10]:
                 content = page.extract_text()
                 if content:
                     text += content + "\n"
@@ -105,9 +105,14 @@ Extract full structured data from this text:
 {text[:15000]}
 """
 
-    response = model.generate_content(prompt)
+    response = client.models.generate_content(
+        model="gemini-1.5-flash-latest",
+        contents=prompt
+    )
 
-    match = re.search(r"\{.*\}", response.text, re.DOTALL)
+    response_text = response.text
+
+    match = re.search(r"\{.*\}", response_text, re.DOTALL)
     if not match:
         raise ValueError("AI did not return valid JSON")
 
@@ -137,7 +142,6 @@ def enforce_schema(slug_id, data):
     ensure(base, "important_instructions", [])
     ensure(base, "important_links", {"links": {}})
 
-    # Critical fix for your details.html
     if "links" not in base["important_links"]:
         base["important_links"]["links"] = {}
 
@@ -196,7 +200,7 @@ def run_engine():
 
     for file in os.listdir(PDF_DIR):
 
-        if not file.endswith(".pdf"):
+        if not file.lower().endswith(".pdf"):
             continue
 
         slug_id = file.lower().replace(".pdf", "").replace(" ", "-")[:50]
