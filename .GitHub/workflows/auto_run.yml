@@ -2,10 +2,10 @@ name: Sarkar Automation Engine
 on:
   push:
     paths:
-      - 'notifications/**.pdf' # Jab aap notifications folder mein PDF dalenge
+      - 'notification/**.pdf' # Path updated to match your folder
   schedule:
-    - cron: '0 0 * * *' # Roz raat 12 baje status update ke liye
-  workflow_dispatch: # Taaki aap manually bhi button daba kar chala sakein
+    - cron: '0 0 * * *'
+  workflow_dispatch:
 
 jobs:
   process-and-update:
@@ -24,18 +24,15 @@ jobs:
 
       - name: Run Engine
         env:
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }} # Yahan GitHub secret use ho raha hai
         run: |
-          # 1. Naye PDFs ko process karna
-          for f in notifications/*.pdf; do
+          for f in notification/*.pdf; do
             if [ -f "$f" ]; then
               python scripts/process_pdf.py "$f"
-              mkdir -p notifications/archive
-              mv "$f" notifications/archive/
+              mkdir -p notification/archive
+              mv "$f" notification/archive/
             fi
           done
-          
-          # 2. Daily Status update karna
           python scripts/status_refresher.py
 
       - name: Commit and Push
