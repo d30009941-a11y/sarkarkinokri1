@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+u<!DOCTYPE html>
 <html lang="hi">
 <head>
 <meta charset="UTF-8">
@@ -516,73 +516,60 @@ function heroSearch(){
 }
 
 async function loadPortal(){
-    // Updated: Removed mainboard.json
+    // Updated: Fetching all 3 data sources
     const [eventsData, portals, important] = await Promise.all([
         fetch('data/events.json').then(r=>r.json()), 
         fetch('data/staticportals.json').then(r=>r.json()),
         fetch('data/importantlinks.json').then(r=>r.json())
     ]);
 
-    /* Populate Specific Recruitment Sections */
-    portals.filter(p=>p.category==="recruitment")
-    .forEach(p=>{
-        document.getElementById("list-recruitment").innerHTML+=`<a href="${p.url}" target="_blank">${p.icon} ${p.name}</a>`;
-    });
+    /* Populate Recruitment Sections */
+    portals.filter(p=>p.category==="recruitment").forEach(p=>{ document.getElementById("list-recruitment").innerHTML+=`<a href="${p.url}" target="_blank">${p.icon} ${p.name}</a>`; });
+    portals.filter(p=>p.category==="police").forEach(p=>{ document.getElementById("list-police").innerHTML+=`<a href="${p.url}" target="_blank">${p.icon} ${p.name}</a>`; });
+    portals.filter(p=>p.category==="teaching").forEach(p=>{ document.getElementById("list-teaching").innerHTML+=`<a href="${p.url}" target="_blank">${p.icon} ${p.name}</a>`; });
 
-    portals.filter(p=>p.category==="police")
-    .forEach(p=>{
-        document.getElementById("list-police").innerHTML+=`<a href="${p.url}" target="_blank">${p.icon} ${p.name}</a>`;
-    });
-
-    portals.filter(p=>p.category==="teaching")
-    .forEach(p=>{
-        document.getElementById("list-teaching").innerHTML+=`<a href="${p.url}" target="_blank">${p.icon} ${p.name}</a>`;
-    });
-
-    /* All Portals - Multi-colored */
+    /* All Portals - Multi-colored pastel items */
     const pastelColors = ["#fef2f2", "#fff7ed", "#fffbeb", "#ecfdf5", "#eff6ff", "#f5f3ff", "#fdf2f8"];
     portals.forEach(p=>{
         let randomColor = pastelColors[Math.floor(Math.random() * pastelColors.length)];
-        document.getElementById("all-portal-grid")
-        .innerHTML+=`<a href="${p.url}" class="portal-item2" target="_blank" style="background:${randomColor}"><span>${p.icon}</span>${p.name}</a>`;
+        document.getElementById("all-portal-grid").innerHTML+=`<a href="${p.url}" class="portal-item2" target="_blank" style="background:${randomColor}"><span>${p.icon}</span>${p.name}</a>`;
     });
 
-    /* Latest Jobs - Updated: Populating from events.json with Ongoing/Scheduled */
+    /* --- FIX: Latest Jobs Logic (Case-Insensitive) --- */
     const jobList = document.getElementById("list-jobs");
-    eventsData.data.filter(e => e.type === "Recruitment" && (e.status === "Active" || e.status === "Ongoing" || e.status === "Scheduled"))
-    .forEach(job => {
-        // Using matching ID and 'master' field for title
-        jobList.innerHTML += `<li><a href="details.html?id=${job.id}">${job.master.replace(/-/g, ' ')}</a></li>`;
+    eventsData.data.filter(e => {
+        const type = (e.type || e.lifecycle || "").toLowerCase();
+        const status = (e.status || "").toLowerCase();
+        return type === "recruitment" && (status === "active" || status === "ongoing" || status === "scheduled");
+    }).forEach(job => {
+        const titleText = (job.master || job.id || "JOB UPDATE").replace(/-/g, ' ').toUpperCase();
+        jobList.innerHTML += `<li><a href="details.html?id=${job.id}">${titleText}</a></li>`;
     });
 
-    /* Board Columns - Admit Card, Results, etc. */
-    // 1. Define Synonyms
+    /* --- FIX: Board Columns Logic (Case-Insensitive & Cleanup) --- */
     const dvSynonyms = ["document verification", "dv", "document scrutiny", "counselling"];
     const admitSynonyms = ["admit card", "hall ticket", "admission slip", "e-admit", "call letter", "city intimation"];
     const resultSynonyms = ["result", "merit list", "scorecard", "marksheet", "final selection"];
 
-        eventsData.data.forEach(item => {
-        // Fix 2: Type ko lowercase kar rahe hain taaki mismatch na ho
-        let type = (item.type || item.lifecycle || "").toLowerCase(); 
+    eventsData.data.forEach(item => {
+        const type = (item.type || item.lifecycle || "").toLowerCase();
+        const status = (item.status || "").toLowerCase();
         
-        let linkText = item.master.replace(/-/g, ' ').toUpperCase(); 
-        let linkHTML = `<li><a href="details.html?id=${item.id}">${linkText}</a></li>`;
-        
-        // Define Synonyms (Same as before)
-        const dvSynonyms = ["document verification", "dv", "document scrutiny", "counselling"];
-        const admitSynonyms = ["admit card", "hall ticket", "admission slip", "e-admit", "call letter", "city intimation"];
-        const resultSynonyms = ["result", "merit list", "scorecard", "marksheet", "final selection"];
+        // Don't show closed/inactive items in board cards
+        if(status.includes("closed") || status.includes("inactive")) return;
 
-        // Refined Filtering Logic (Now Case-Insensitive)
-        if(admitSynonyms.some(synonym => type.includes(synonym))) {
+        const linkText = (item.master || item.id || "UPDATE").replace(/-/g, ' ').toUpperCase();
+        const linkHTML = `<li><a href="details.html?id=${item.id}">${linkText}</a></li>`;
+        
+        if(admitSynonyms.some(s => type.includes(s))) {
             document.getElementById("list-admit").innerHTML += linkHTML;
-        } else if(resultSynonyms.some(synonym => type.includes(synonym))) {
+        } else if(resultSynonyms.some(s => type.includes(s))) {
             document.getElementById("list-result").innerHTML += linkHTML;
         } else if(type.includes("answer") || type.includes("response")) {
             document.getElementById("list-answer").innerHTML += linkHTML;
-        } else if(dvSynonyms.some(synonym => type.includes(synonym))) {
+        } else if(dvSynonyms.some(s => type.includes(s))) {
             document.getElementById("list-dv").innerHTML += linkHTML;
-        } else if(type.includes("interview") || type.includes("skill") || type.includes("physical") || type.includes("medical")) {
+        } else if(type.match(/interview|skill|physical|medical/)) {
             document.getElementById("list-interview").innerHTML += linkHTML;
         }
     });
@@ -592,14 +579,11 @@ async function loadPortal(){
         let color=["#d32f2f","#1976d2","#f57c00","#388e3c","#7b1fa2","#0097a7"];
         let random=color[Math.floor(Math.random()*color.length)];
         let box=`<div class="resource-box"><h4 style="background:${random}">${cat.category}</h4>`;
-        cat.links.forEach(link=>{
-            box+=`<a href="${link.url}" target="_blank">${link.title}</a>`;
-        });
+        cat.links.forEach(link=>{ box+=`<a href="${link.url}" target="_blank">${link.title}</a>`; });
         box+=`</div>`;
         document.getElementById("resource-grid").innerHTML+=box;
     });
 }
-
 loadPortal();
 </script>
 
