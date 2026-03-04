@@ -8,7 +8,9 @@ from google import genai
 # ==========================
 # CONFIGURATION
 # ==========================
-client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
+client = genai.Client(
+    api_key=os.getenv("GEMINI_API_KEY"),
+)
 
 PDF_DIR = "notification/"
 JOBS_DIR = "data/jobsdata/"
@@ -99,7 +101,7 @@ Extract full structured data from this text:
 """
 
     response = client.models.generate_content(
-        model="gemini-1.5-flash",
+        model="gemini-3-flash-preview",
         contents=prompt
     )
 
@@ -156,7 +158,6 @@ def save_job_json(slug_id, data):
 # ==========================
 def update_events(slug_id, structured_data):
     db = load_events()
-
     existing_ids = {item["id"] for item in db["data"]}
 
     if slug_id in existing_ids:
