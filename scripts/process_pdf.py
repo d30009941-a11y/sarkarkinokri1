@@ -1,6 +1,7 @@
 import os
 import json
 import re
+import time
 import pdfplumber
 from datetime import datetime
 from google import genai
@@ -51,7 +52,7 @@ def extract_pdf_text(path):
 
 
 # ==========================
-# AI EXTRACTION
+# AI EXTRACTION WITH RETRY
 # ==========================
 def extract_structured_data(slug_id, text):
 
@@ -60,58 +61,40 @@ Return ONLY valid JSON.
 
 Root key must be exactly "{slug_id}"
 
-Structure must strictly follow:
+Extract structured recruitment data from this notification text:
 
-{{
-  "{slug_id}": {{
-    "overview": {{
-        "post_name": "",
-        "recruitment_body": "",
-        "notification_number": ""
-    }},
-    "important_dates": {{}},
-    "application_fee": {{}},
-    "age_limit": {{
-        "minimum": "",
-        "maximum": "",
-        "relaxation": ""
-    }},
-    "educational_qualification": [],
-    "vacancy_details": {{
-        "total": "",
-        "table": []
-    }},
-    "selection_process": [],
-    "syllabus": {{
-        "mathematics": [],
-        "reasoning": [],
-        "general_awareness": []
-    }},
-    "medical_standards": {{}},
-    "important_instructions": [],
-    "important_links": {{
-        "links": {{}}
-    }}
-  }}
-}}
-
-Extract full structured data from this text:
-
-{text[:15000]}
+{text[:12000]}
 """
 
-    response = client.models.generate_content(
-        model="gemini-3-flash-preview",
-        contents=prompt
-    )
+    max_retries = 5
+    wait_time = 5  # initial wait time (seconds)
 
-    response_text = response.text
+    for attempt in range(max_retries):
+        try:
+            print(f"🤖 AI Attempt {attempt+1}")
 
-    match = re.search(r"\{.*\}", response_text, re.DOTALL)
-    if not match:
-        raise ValueError("AI did not return valid JSON")
+            response = client.models.generate_content(
+                model="gemini-3.1-flash-lite-preview",
+                contents=prompt
+            )
 
-    return json.loads(match.group(0))
+            response_text = response.text
+
+            match = re.search(r"\{.*\}", response_text, re.DOTALL)
+            if not match:
+                raise ValueError("AI did not return valid JSON")
+
+            return json.loads(match.group(0))
+
+        except Exception as e:
+            print(f"⚠ Attempt {attempt+1} failed: {e}")
+
+            if attempt < max_retries - 1:
+                print(f"⏳ Waiting {wait_time} seconds before retry...")
+                time.sleep(wait_time)
+                wait_time *= 2  # exponential backoff
+            else:
+                raise e
 
 
 # ==========================
@@ -161,21 +144,21 @@ def update_events(slug_id, structured_data):
     existing_ids = {item["id"] for item in db["data"]}
 
     if slug_id in existing_ids:
-        print("Already exists in events.json")
+        print("⏩ Already exists in events.json")
         return
 
     base = structured_data[slug_id]
 
     meta_entry = {
         "id": slug_id,
-        "master": base["overview"].get("post_name", slug_id),
+        "master": base.get("overview", {}).get("post_name", slug_id),
         "lifecycle": "notification",
         "phase": "",
         "region": "",
         "notification_type": "detailed",
         "type": "Recruitment",
         "status": "Active",
-        "url": base["important_links"]["links"].get("Official Website", ""),
+        "url": base.get("important_links", {}).get("links", {}).get("Official Website", ""),
         "last_updated": datetime.now().strftime("%Y-%m-%d")
     }
 
@@ -191,7 +174,7 @@ def update_events(slug_id, structured_data):
 def run_engine():
 
     if not os.path.exists(PDF_DIR):
-        print("Notification folder not found.")
+        print("❌ Notification folder not found.")
         return
 
     db = load_events()
@@ -226,7 +209,7 @@ def run_engine():
             print(f"✅ Successfully saved: {slug_id}")
 
         except Exception as e:
-            print(f"❌ Error in {file}: {e}")
+            print(f"❌ Final failure in {file}: {e}")
 
 
 if __name__ == "__main__":
