@@ -6,14 +6,6 @@ from datetime import datetime
 from google import genai
 
 # ==========================
-# DEBUG (Keep for now)
-# ==========================
-print("Current working directory:", os.getcwd())
-print("Folders in root:", os.listdir())
-print("Notification folder exists:", os.path.exists("notification"))
-print("Files inside notification:", os.listdir("notification") if os.path.exists("notification") else "NOT FOUND")
-
-# ==========================
 # CONFIGURATION
 # ==========================
 client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
@@ -50,8 +42,9 @@ def extract_pdf_text(path):
                 content = page.extract_text()
                 if content:
                     text += content + "\n"
-    except:
-        pass
+    except Exception as e:
+        print("PDF extraction error:", e)
+
     return text
 
 
@@ -106,7 +99,7 @@ Extract full structured data from this text:
 """
 
     response = client.models.generate_content(
-        model="gemini-1.5-flash-latest",
+        model="gemini-1.5-flash",
         contents=prompt
     )
 
@@ -116,8 +109,7 @@ Extract full structured data from this text:
     if not match:
         raise ValueError("AI did not return valid JSON")
 
-    data = json.loads(match.group(0))
-    return data
+    return json.loads(match.group(0))
 
 
 # ==========================
@@ -154,6 +146,7 @@ def enforce_schema(slug_id, data):
 # ==========================
 def save_job_json(slug_id, data):
     os.makedirs(JOBS_DIR, exist_ok=True)
+
     with open(f"{JOBS_DIR}{slug_id}.json", "w", encoding="utf-8") as f:
         json.dump(data, f, indent=4)
 
@@ -167,6 +160,7 @@ def update_events(slug_id, structured_data):
     existing_ids = {item["id"] for item in db["data"]}
 
     if slug_id in existing_ids:
+        print("Already exists in events.json")
         return
 
     base = structured_data[slug_id]
@@ -194,6 +188,10 @@ def update_events(slug_id, structured_data):
 # MAIN ENGINE
 # ==========================
 def run_engine():
+
+    if not os.path.exists(PDF_DIR):
+        print("Notification folder not found.")
+        return
 
     db = load_events()
     existing_ids = {item["id"] for item in db["data"]}
