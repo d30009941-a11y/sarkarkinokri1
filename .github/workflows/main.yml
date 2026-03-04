@@ -1,29 +1,51 @@
 name: Sarkar Automation Engine
+
 on:
   push:
     paths:
       - 'notification/*.pdf'
   workflow_dispatch:
 
+concurrency:
+  group: sarkar-automation
+  cancel-in-progress: false
+
 jobs:
   process-and-update:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v4
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # Important for rebase
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
         with:
           python-version: '3.9'
-      - run: pip install google-generativeai PyPDF2
+
+      - name: Install Dependencies
+        run: pip install google-generativeai PyPDF2
+
       - name: Run Engine
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: python scripts/process_pdf.py
-      - name: Commit and Push
+
+      - name: Commit and Push Changes
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
-          git add data/
-          git commit -m "AI Update" || echo "No changes"
-          git push
+
+          git add .
+
+          git commit -m "AI Automated Update" || echo "No changes to commit"
+
+          # Pull latest changes safely
+          git pull --rebase origin main || echo "Nothing to pull"
+
+          # Push safely
+          git push origin main
