@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Job Details | SarkarKinokri</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="detailstyle.css">
+</head>
+<body>
+<div class="container">
+    <div id="loader"><div class="spinner"></div><p>Checking priority...</p></div>
+    <div id="main-content" style="display: none;"></div>
+</div>
+<script>
+    const urlParams = new URLSearchParams(window.location.search);
+    const jobId = urlParams.get('id');
+    const detailedInfoURL = `${jobId}.html`;
+
+    if (jobId) {
+        fetch(detailedInfoURL, { method: 'HEAD' })
+            .then(res => {
+                if (res.ok) window.location.replace(detailedInfoURL);
+                else loadJsonData(jobId);
+            })
+            .catch(() => loadJsonData(jobId));
+    }
+
+    function loadJsonData(id) {
+        fetch(`data/jobsdata/${id}.json`)
+            .then(res => { if (!res.ok) throw new Error("404"); return res.json(); })
+            .then(json => {
+                const dataKey = json[id] ? id : Object.keys(json)[0];
+                renderEngine(json[dataKey]);
+            })
+            .catch(() => loadFallback(id));
+    }
+
+    async function loadFallback(id) {
+        try {
+            const res = await fetch('data/events.json');
+            const master = await res.json();
+            const job = master.data.find(e => e.id === id);
+            if (job) renderFallbackPage(job);
+            else showError("Job not found.");
+        } catch (e) { showError("Error fetching data."); }
+    }
+
+    function renderEngine(data) {
+        document.getElementById('loader').style.display = 'none';
+        const content = document.getElementById('main-content');
+        content.style.display = 'block';
+        let adHTML = data.advertisement?.enabled ? `<div id="ad-slot" style="display:block;">${data.advertisement.content}</div>` : "";
+        content.innerHTML = adHTML;
+
+        const header = document.createElement('div');
+        header.className = 'job-header';
+        header.innerHTML = `<h1>${data.overview.post_name || data.overview.category}</h1>
+            <div class="meta-pills">
+                <span class="pill"><i class="fas fa-university"></i> ${data.overview.recruitment_body}</span>
+                <span class="pill"><i class="fas fa-file-alt"></i> ${data.overview.notification_number || data.overview.notification}</span>
+            </div>`;
+        content.appendChild(header);
+
+        const btnHTML = `<div class="detailed-btn-wrapper"><a href="#" class="btn-detailed detailed-info-btn">CLICK HERE FOR DETAILED INFORMATION</a></div>`;
+        content.insertAdjacentHTML('beforeend', btnHTML);
+
+        const dashboard = document.createElement('div');
+        dashboard.className = 'info-dashboard';
+        dashboard.innerHTML = `<div class="section-box">
+                <div class="section-title"><i class="fas fa-calendar-alt"></i> Important Dates</div>
+                <div class="generic-grid">
+                    ${Object.entries(data.important_dates).map(([k, v]) => `<div class="grid-card"><label>${k}</label><span>${v}</span></div>`).join('')}
+                </div>
+            </div>
+            <div class="section-box">
+                <div class="section-title"><i class="fas fa-rupee-sign"></i> Application Fee</div>
+                <div class="generic-grid">
+                    ${Object.entries(data.application_fee).map(([k, v]) => `<div class="grid-card"><label>${k}</label><span>${v}</span></div>`).join('')}
+                </div>
+            </div>`;
+        content.appendChild(dashboard);
+
+        const skip = ['overview', 'important_dates', 'application_fee', 'important_links', 'vacancy_details', 'advertisement'];
+        Object.entries(data).forEach(([key, value]) => {
+            if (skip.includes(key)) return;
+            const sec = document.createElement('div');
+            sec.className = 'section-box';
+            sec.style.marginTop = '20px';
+            const title = key.replace(/_/g, ' ').toUpperCase();
+            let secHTML = `<div class="section-title">${title}</div>`;
+            if (Array.isArray(value)) secHTML += `<ul>${value.map(item => `<li>${item}</li>`).join('')}</ul>`;
+            else if (typeof value === 'object') secHTML += `<div class="generic-grid">${Object.entries(value).map(([k, v]) => `<div class="grid-card"><label>${k}</label><span>${v}</span></div>`).join('')}</div>`;
+            else secHTML += `<p>${value}</p>`;
+            sec.innerHTML = secHTML;
+            content.appendChild(sec);
+        });
+
+        if (data.vacancy_details) content.insertAdjacentHTML('beforeend', renderTable(data.vacancy_details, "📊 Vacancy Breakdown"));
+        content.insertAdjacentHTML('beforeend', btnHTML);
+
+        if (data.important_links?.links) {
+            const actionSec = document.createElement('div');
+            actionSec.className = 'section-box';
+            actionSec.style.marginTop = '20px';
+            let actionHTML = `<div class="section-title"><i class="fas fa-link"></i> Quick Actions</div><div class="link-grid">`;
+            Object.entries(data.important_links.links).forEach(([label, url]) => {
+                const isActive = url && url !== '#' && url !== '' && url !== 'null';
+                let btnClass = isActive ? `btn btn-action-active` : 'btn btn-inactive';
+                if(label.toLowerCase().includes("download notification")) btnClass += ' btn-download-ref';
+                actionHTML += `<a href="${isActive ? url : '#'}" target="_blank" class="${btnClass}">${label}</a>`;
+            });
+            actionHTML += `</div>`;
+            actionSec.innerHTML = actionHTML;
+            content.appendChild(actionSec);
+        }
+
+        const detailedBtnEls = document.querySelectorAll('.detailed-info-btn');
+        fetch(detailedInfoURL, { method: 'HEAD' })
+            .then(res => {
+                if (res.ok) {
+                    detailedBtnEls.forEach(btn => {
+                        btn.classList.add('btn-flash');
+                        btn.href = detailedInfoURL;
+                    });
+                } else throw new Error("Not Available");
+            })
+            .catch(() => {
+                detailedBtnEls.forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        const downBtn = document.querySelector('.btn-download-ref');
+                        if (downBtn) downBtn.click();
+                    });
+                });
+            });
+    }
+
+    function renderTable(data, title) {
+        const tableData = data.table || data.vacancy_table || data.rows || data;
+        if (!Array.isArray(tableData) || tableData.length === 0) return '';
+        const headers = Object.keys(tableData[0]);
+        return `<div class="section-box" style="margin-top:20px;">
+                <div class="section-title"><i class="fas fa-users"></i> ${title}</div>
+                <div class="table-wrapper">
+                    <table>
+                        <thead><tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr></thead>
+                        <tbody>${tableData.map(row => `<tr>${headers.map(h => `<td>${row[h]}</td>`).join('')}</tr>`).join('')}</tbody>
+                    </table>
+                </div>
+            </div>`;
+    }
+
+    function renderFallbackPage(job) {
+        document.getElementById('loader').style.display = 'none';
+        const content = document.getElementById('main-content');
+        content.style.display = 'block';
+        content.innerHTML = `<div class="job-header"><h1>${job.master.replace(/-/g, ' ').toUpperCase()}</h1><div class="meta-pills"><span class="pill">Status: ${job.status}</span></div></div><div class="section-box"><a href="${job.url}" class="btn btn-action-active" target="_blank">Visit Official Website</a></div>`;
+    }
+    function showError(msg) { document.getElementById('loader').innerHTML = `<p style="color:red;">${msg}</p>`; }
+</script>
+</body>
+</html>
