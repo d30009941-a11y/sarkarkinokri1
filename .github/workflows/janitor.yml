@@ -1,0 +1,47 @@
+name: Sarkar Daily Janitor
+
+on:
+  schedule:
+    - cron: '0 3 * * *'   # Daily at 3 AM UTC
+  workflow_dispatch:
+
+concurrency:
+  group: sarkar-automation
+  cancel-in-progress: false
+
+jobs:
+  janitor:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: Run Janitor Script
+        run: python scripts/janitor.py
+
+      - name: Commit and Push Safely
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+
+          git add .
+
+          if git diff --cached --quiet; then
+            echo "No changes detected. Skipping commit and push."
+            exit 0
+          fi
+
+          git commit -m "Lifecycle Auto Update"
+
+          git pull --rebase origin main
+          git push origin main
