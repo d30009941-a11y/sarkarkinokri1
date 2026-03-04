@@ -561,12 +561,19 @@ async function loadPortal(){
     const admitSynonyms = ["admit card", "hall ticket", "admission slip", "e-admit", "call letter", "city intimation"];
     const resultSynonyms = ["result", "merit list", "scorecard", "marksheet", "final selection"];
 
-    eventsData.data.forEach(item => {
-        let type = (item.type || "").toLowerCase();
-        let linkText = item.master.replace(/-/g, ' ').toUpperCase(); // Using 'master' for better title
+        eventsData.data.forEach(item => {
+        // Fix 2: Type ko lowercase kar rahe hain taaki mismatch na ho
+        let type = (item.type || item.lifecycle || "").toLowerCase(); 
+        
+        let linkText = item.master.replace(/-/g, ' ').toUpperCase(); 
         let linkHTML = `<li><a href="details.html?id=${item.id}">${linkText}</a></li>`;
         
-        // 2. Refined Filtering Logic
+        // Define Synonyms (Same as before)
+        const dvSynonyms = ["document verification", "dv", "document scrutiny", "counselling"];
+        const admitSynonyms = ["admit card", "hall ticket", "admission slip", "e-admit", "call letter", "city intimation"];
+        const resultSynonyms = ["result", "merit list", "scorecard", "marksheet", "final selection"];
+
+        // Refined Filtering Logic (Now Case-Insensitive)
         if(admitSynonyms.some(synonym => type.includes(synonym))) {
             document.getElementById("list-admit").innerHTML += linkHTML;
         } else if(resultSynonyms.some(synonym => type.includes(synonym))) {
@@ -574,10 +581,8 @@ async function loadPortal(){
         } else if(type.includes("answer") || type.includes("response")) {
             document.getElementById("list-answer").innerHTML += linkHTML;
         } else if(dvSynonyms.some(synonym => type.includes(synonym))) {
-            // 3. Route to DV Card
             document.getElementById("list-dv").innerHTML += linkHTML;
         } else if(type.includes("interview") || type.includes("skill") || type.includes("physical") || type.includes("medical")) {
-            // 4. Interview card only gets true interviews
             document.getElementById("list-interview").innerHTML += linkHTML;
         }
     });
