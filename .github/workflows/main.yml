@@ -3,19 +3,22 @@ name: Recruitment Portal Update
 on:
   push:
     paths:
-      - 'notification/**' # Triggers when you upload a new PDF
-  workflow_dispatch: # Allows you to run it manually from the Actions tab
+      - 'notification/**'
+  workflow_dispatch:
 
 jobs:
   update-portal:
     runs-on: ubuntu-latest
-    # Added permissions to ensure the bot can push the generated JSONs
+    timeout-minutes: 15 # Increased for rate-limit delays
+
     permissions:
       contents: write
 
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -23,11 +26,12 @@ jobs:
           python-version: '3.10'
 
       - name: Install Dependencies
-        run: pip install google-genai pdfplumber python-dotenv
+        run: |
+          pip install google-genai pdfplumber python-dotenv
+          # Or pip install -r requirements.txt if file exists
 
       - name: Run Auto Pipeline
         env:
-          # Mapping the GitHub Secrets to the Environment Variables your script expects
           GEMINI_API_KEY_1: ${{ secrets.GEMINI_API_KEY_1 }}
           GEMINI_API_KEY_2: ${{ secrets.GEMINI_API_KEY_2 }}
           GEMINI_API_KEY_3: ${{ secrets.GEMINI_API_KEY_3 }}
@@ -38,10 +42,9 @@ jobs:
           git config --global user.name "Portal-Bot"
           git config --global user.email "bot@yourdomain.com"
           
-          # This command captures new Master JSONs and the new Event JSONs
-          # regardless of whether the folders were just created
-          git add data/
+          # Fix: Added -A and pointed to the parent data folder
+          git add -A data/ 
           
-          # The "|| echo" prevents the pipeline from failing if there are no new updates
-          git commit -m "auto: update jobs and event timelines [skip ci]" || echo "No changes to commit"
+          # Added [skip ci] to prevent infinite loops
+          git commit -m "auto: update jobs and events [skip ci]" || echo "No changes to commit"
           git push
