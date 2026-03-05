@@ -1,67 +1,131 @@
-import os, re, json, time, pdfplumber
-from google import genai
+import os
+import json
+import re
+import time
+import pdfplumber
 from datetime import datetime
+from google import genai
 
+# ==========================
 # CONFIGURATION
-PDF_DIR, JOBS_DIR = "notification/", "data/jobsdata/"
-STABLE_MODEL = "gemini-1.5-flash" # Fixes 404
+# ==========================
+API_KEY = os.getenv("GEMINI_API_KEY")
+MODEL = "gemini-3.1-flash-lite-preview"
+MAX_RETRIES = 5
+INITIAL_WAIT = 5  # seconds
+PDF_DIR = "notification/"
+JOBS_DIR = "data/jobsdata/"
 
-class GeminiRotator:
-    def __init__(self):
-        self.keys = [os.getenv(f"GEMINI_API_KEY_{i}") for i in range(1, 4) if os.getenv(f"GEMINI_API_KEY_{i}")]
-        if not self.keys: raise RuntimeError("❌ No API keys")
-        self.index = 0
-        self.client = genai.Client(api_key=self.keys[0])
+client = genai.Client(api_key=API_KEY)
 
-    def rotate(self):
-        self.index = (self.index + 1) % len(self.keys)
-        self.client = genai.Client(api_key=self.keys[self.index])
-
-rotator = GeminiRotator()
-
-def generate_hardened_slug(text, filename):
-    # Strict Format: org-shortcode + notification-code + year
-    sample = text[:2000].lower()
-    org = "govt"
-    for k in ["rrb", "ssc", "upsc", "nta", "rbi", "ibps"]:
-        if k in sample: org = k; break
-    
-    notif_match = re.search(r'(cen|advt|notice)\s*(\d+[\-/]\d{4})', sample)
-    if notif_match:
-        code = notif_match.group(2).replace("/", "-")
-        slug = f"{org}-{notif_match.group(1)}-{code}"
-    else:
-        slug = f"{org}-{re.sub(r'[^a-z0-9]', '-', filename.lower()[:20])}"
-    return slug[:40].strip("-")
-
-def run_engine():
-    os.makedirs(JOBS_DIR, exist_ok=True)
-    for file in os.listdir(PDF_DIR):
-        if not file.lower().endswith(".pdf"): continue
-        path = os.path.join(PDF_DIR, file)
-        
+# ==========================
+# HELPER FUNCTIONS
+# ==========================
+def extract_pdf_text(path, pages=20):
+    text = ""
+    try:
         with pdfplumber.open(path) as pdf:
-            text = "\n".join([p.extract_text() or "" for p in pdf.pages[:10]])
-            
-        slug_id = generate_hardened_slug(text, file)
-        final_path = os.path.join(JOBS_DIR, f"{slug_id}.json")
-        if os.path.exists(final_path): continue
+            for p in pdf.pages[:pages]:
+                content = p.extract_text()
+                if content:
+                    text += content + "\n"
+    except Exception as e:
+        print("PDF extraction error:", e)
+    return text
 
-        prompt = f"Return ONLY valid JSON. Root key: '{slug_id}'. Extract recruitment data: {text[:12000]}"
-        
-        for _ in range(len(rotator.keys) * 2):
-            try:
-                res = rotator.client.models.generate_content(model=STABLE_MODEL, contents=prompt)
-                match = re.search(r"\{.*\}", res.text, re.DOTALL)
-                if match:
-                    data = json.loads(match.group(0))
-                    with open(final_path, "w") as f: json.dump(data, f, indent=4)
-                    print(f"✅ Hardened: {slug_id}")
-                    time.sleep(15) # Lengthy execution to avoid 429
-                    break
-            except Exception as e:
-                print(f"⚠️ Error: {str(e)[:50]}")
-                rotator.rotate()
-                time.sleep(10)
+def safe_json_load(text):
+    try:
+        match = re.search(r"\{.*\}", text, re.DOTALL)
+        if match:
+            return json.loads(match.group(0))
+    except:
+        pass
+    return None
 
-if __name__ == "__main__": run_engine()
+def generate_slug(filename, text_sample=None):
+    # Use master ID or fallback to filename
+    if text_sample:
+        code_match = re.search(r'(cen|advt|notification|notice|phase)\s*(?:no\.?|number)?\s*[:\-]?\s*(\d+[\-/]\d{2,4})', text_sample.lower())
+        if code_match:
+            prefix = code_match.group(1)[:4]
+            code = code_match.group(2).replace("/", "-")
+            return f"{prefix}-{code}".lower()
+    # fallback
+    return filename.lower().replace(".pdf","").replace(" ","-")[:50]
+
+def enforce_schema(slug_id, data):
+    base = data.get(slug_id, {})
+    base.setdefault("overview", {})
+    base.setdefault("important_dates", {})
+    base.setdefault("application_fee", {})
+    base.setdefault("age_limit", {"minimum":"","maximum":"","relaxation":""})
+    base.setdefault("educational_qualification", [])
+    base.setdefault("vacancy_details", {"total":"","table":[]})
+    base.setdefault("selection_process", [])
+    base.setdefault("syllabus", {"mathematics":[], "reasoning":[], "general_awareness":[]})
+    base.setdefault("medical_standards", {})
+    base.setdefault("important_instructions", [])
+    base.setdefault("important_links", {"links":{}})
+    data[slug_id] = base
+    return data
+
+def save_job_json(slug_id, data):
+    os.makedirs(JOBS_DIR, exist_ok=True)
+    with open(os.path.join(JOBS_DIR, f"{slug_id}.json"), "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=4)
+
+def extract_structured_data(slug_id, text):
+    prompt = f"""
+Return ONLY valid JSON.
+Root key must be exactly "{slug_id}"
+Extract structured recruitment data from this notification text:
+{text[:12000]}
+"""
+    wait = INITIAL_WAIT
+    for attempt in range(MAX_RETRIES):
+        try:
+            print(f"🤖 AI Attempt {attempt+1} for {slug_id}")
+            response = client.models.generate_content(model=MODEL, contents=prompt)
+            structured = safe_json_load(response.text)
+            if structured:
+                return structured
+            raise ValueError("AI did not return valid JSON")
+        except Exception as e:
+            print(f"⚠ Attempt {attempt+1} failed: {e}")
+            if attempt < MAX_RETRIES -1:
+                time.sleep(wait)
+                wait *= 2
+            else:
+                raise e
+
+# ==========================
+# MAIN ENGINE
+# ==========================
+def run_engine():
+    if not os.path.exists(PDF_DIR):
+        print("❌ Notification folder not found.")
+        return
+
+    for file in os.listdir(PDF_DIR):
+        if not file.lower().endswith(".pdf"):
+            continue
+
+        path = os.path.join(PDF_DIR, file)
+        text = extract_pdf_text(path)
+        slug_id = generate_slug(file, text_sample=text)
+
+        # Skip if already exists
+        if os.path.exists(os.path.join(JOBS_DIR, f"{slug_id}.json")):
+            print(f"⏩ Skipped existing: {slug_id}")
+            continue
+
+        try:
+            structured_data = extract_structured_data(slug_id, text)
+            structured_data = enforce_schema(slug_id, structured_data)
+            save_job_json(slug_id, structured_data)
+            print(f"✅ Successfully saved: {slug_id}")
+        except Exception as e:
+            print(f"❌ Failed {file}: {e}")
+
+if __name__ == "__main__":
+    run_engine()
