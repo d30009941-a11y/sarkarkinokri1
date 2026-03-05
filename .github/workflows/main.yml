@@ -3,49 +3,43 @@ name: Recruitment Portal Update
 on:
   push:
     paths:
-      - 'notification/**'
-  workflow_dispatch:
+      - 'notification/**'        # Trigger only if new PDFs are added
+  workflow_dispatch:            # Allows manual trigger
 
 jobs:
   update-portal:
     runs-on: ubuntu-latest
-    # INCREASED TIMEOUT: AI rotation with 15s sleeps needs more than 15 mins for many PDFs
-    timeout-minutes: 60 
-
-    permissions:
-      contents: write
 
     steps:
+      # 1️⃣ Checkout Repository
       - name: Checkout Code
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
+      # 2️⃣ Setup Python
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.10'
 
+      # 3️⃣ Install Dependencies
       - name: Install Dependencies
         run: |
-          pip install google-genai pdfplumber python-dotenv
+          pip install --upgrade pip
+          pip install google-genai>=0.3.0 pdfplumber python-dotenv
 
+      # 4️⃣ Run Auto Pipeline
       - name: Run Auto Pipeline
         env:
           GEMINI_API_KEY_1: ${{ secrets.GEMINI_API_KEY_1 }}
           GEMINI_API_KEY_2: ${{ secrets.GEMINI_API_KEY_2 }}
           GEMINI_API_KEY_3: ${{ secrets.GEMINI_API_KEY_3 }}
-        # Run from the root so scripts find /notification and /data
         run: python scripts/auto_pipeline.py
 
+      # 5️⃣ Commit and Push Generated JSONs
       - name: Commit and Push Changes
         run: |
           git config --global user.name "Portal-Bot"
           git config --global user.email "bot@yourdomain.com"
-          
-          # Stage all changes in the data directory
-          git add data/
-          
-          # [skip ci] is mandatory to prevent the bot from triggering itself
-          git commit -m "auto: portal sync $(date +'%Y-%m-%d') [skip ci]" || echo "No changes to commit"
+          git add data/jobsdata/*.json data/events/*.json
+          git commit -m "auto: update jobs and events timeline [skip ci]" || echo "No changes to commit"
           git push
