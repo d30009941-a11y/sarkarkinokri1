@@ -1,41 +1,37 @@
-name: Run Engine
+name: Recruitment Portal Update
 
 on:
-  workflow_dispatch:
   push:
     paths:
       - 'notification/**'
-      - 'scripts/process_pdf.py'
-      - 'requirements.txt'
+  workflow_dispatch: # Allows manual trigger
 
 jobs:
-  build:
+  update-portal:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout repository
+      - name: Checkout Code
         uses: actions/checkout@v4
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.10'
 
-      - name: Install dependencies
-        run: |
-          pip install --upgrade pip
-          pip install -r requirements.txt
+      - name: Install Dependencies
+        run: pip install google-genai pdfplumber
 
-      - name: Run Engine
+      - name: Run Auto Pipeline
         env:
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-        run: |
-          python scripts/process_pdf.py
+          GEMINI_API_KEY_1: ${{ secrets.GEMINI_API_KEY_1 }}
+          GEMINI_API_KEY_2: ${{ secrets.GEMINI_API_KEY_2 }}
+          GEMINI_API_KEY_3: ${{ secrets.GEMINI_API_KEY_3 }}
+        run: python scripts/auto_pipeline.py
 
-      - name: Commit and Push if changes
+      - name: Commit and Push Changes
         run: |
-          git config user.name "github-actions"
-          git config user.email "actions@github.com"
-          git add .
-          git diff --cached --quiet || git commit -m "Auto update jobs data"
+          git config --global user.name "Portal-Bot"
+          git config --global user.email "bot@yourdomain.com"
+          git add data/jobsdata/*.json data/events/*.json
+          git commit -m "auto: update jobs and event timelines [skip ci]" || echo "No changes to commit"
           git push
