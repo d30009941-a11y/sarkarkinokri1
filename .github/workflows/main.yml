@@ -9,7 +9,8 @@ on:
 jobs:
   update-portal:
     runs-on: ubuntu-latest
-    timeout-minutes: 15 # Increased for rate-limit delays
+    # INCREASED TIMEOUT: AI rotation with 15s sleeps needs more than 15 mins for many PDFs
+    timeout-minutes: 60 
 
     permissions:
       contents: write
@@ -28,13 +29,13 @@ jobs:
       - name: Install Dependencies
         run: |
           pip install google-genai pdfplumber python-dotenv
-          # Or pip install -r requirements.txt if file exists
 
       - name: Run Auto Pipeline
         env:
           GEMINI_API_KEY_1: ${{ secrets.GEMINI_API_KEY_1 }}
           GEMINI_API_KEY_2: ${{ secrets.GEMINI_API_KEY_2 }}
           GEMINI_API_KEY_3: ${{ secrets.GEMINI_API_KEY_3 }}
+        # Run from the root so scripts find /notification and /data
         run: python scripts/auto_pipeline.py
 
       - name: Commit and Push Changes
@@ -42,9 +43,9 @@ jobs:
           git config --global user.name "Portal-Bot"
           git config --global user.email "bot@yourdomain.com"
           
-          # Fix: Added -A and pointed to the parent data folder
-          git add -A data/ 
+          # Stage all changes in the data directory
+          git add data/
           
-          # Added [skip ci] to prevent infinite loops
-          git commit -m "auto: update jobs and events [skip ci]" || echo "No changes to commit"
+          # [skip ci] is mandatory to prevent the bot from triggering itself
+          git commit -m "auto: portal sync $(date +'%Y-%m-%d') [skip ci]" || echo "No changes to commit"
           git push
