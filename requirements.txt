@@ -1,3 +1,5 @@
-google-genai>=1.10.0
-pdfplumber>=0.11.0
-python-dotenv>=1.0.1
+# AI Model Configuration
+MODEL=gemini-3.1-flash-lite-preview
+MAX_PROMPT_CHARS=12000
+MAX_RETRIES=5
+INITIAL_WAIT_SECONDS=5
