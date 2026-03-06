@@ -1,0 +1,16 @@
+{
+  "data": [
+    {
+      "id": "rrb-cen-08-2025-notif",
+      "master": "rrb-cen-08-2025",
+      "lifecycle": "notification",
+      "phase": "",
+      "type": "Recruitment",
+      "status": "active",
+      "url": "details.html?id=rrb-cen-08-2025",
+      "opening_date": "29/01/2026",
+      "closing_date": "29/01/2026",
+      "last_updated": "2026-03-06"
+    }
+  ]
+}
