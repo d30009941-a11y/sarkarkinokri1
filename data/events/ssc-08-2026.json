@@ -1,0 +1,16 @@
+{
+  "data": [
+    {
+      "id": "ssc-cgl-2025-ans",
+      "master": "ssc-cgl-2025",
+      "type": "answer-key-t1",
+      "status": "Active"
+    },
+    {
+      "id": "ssc-cgl-2025-notif",
+      "master": "ssc-cgl-2025-notification",
+      "type": "Recruitment",
+      "status": "Active"
+    }
+  ]
+}
